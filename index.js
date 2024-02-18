@@ -1,7 +1,4 @@
-const debug = require('debug')('extract-zip')
-// eslint-disable-next-line node/no-unsupported-features/node-builtins
 const { createWriteStream, promises: fs } = require('fs')
-const getStream = require('get-stream')
 const path = require('path')
 const { promisify } = require('util')
 const stream = require('stream')
@@ -17,13 +14,11 @@ class Extractor {
   }
 
   async extract () {
-    debug('opening', this.zipPath, 'with opts', this.opts)
-
     this.zipfile = await openZip(this.zipPath, { lazyEntries: true })
     this.canceled = false
 
     return new Promise((resolve, reject) => {
-      this.zipfile.on('error', err => {
+      this.zipfile.on('error', (err) => {
         this.canceled = true
         reject(err)
       })
@@ -31,19 +26,14 @@ class Extractor {
 
       this.zipfile.on('close', () => {
         if (!this.canceled) {
-          debug('zip extraction complete')
           resolve()
         }
       })
 
-      this.zipfile.on('entry', async entry => {
-        /* istanbul ignore if */
+      this.zipfile.on('entry', async (entry) => {
         if (this.canceled) {
-          debug('skipping entry', entry.fileName, { cancelled: this.canceled })
           return
         }
-
-        debug('zipfile entry', entry.fileName)
 
         if (entry.fileName.startsWith('__MACOSX/')) {
           this.zipfile.readEntry()
@@ -56,14 +46,16 @@ class Extractor {
           await fs.mkdir(destDir, { recursive: true })
 
           const canonicalDestDir = await fs.realpath(destDir)
-          const relativeDestDir = path.relative(this.opts.dir, canonicalDestDir)
+          const relativeDestDir = path.relative(
+              this.opts.dir,
+              canonicalDestDir
+          )
 
           if (relativeDestDir.split(path.sep).includes('..')) {
             throw new Error(`Out of bound path "${canonicalDestDir}" found while processing file ${entry.fileName}`)
           }
 
           await this.extractEntry(entry)
-          debug('finished processing', entry.fileName)
           this.zipfile.readEntry()
         } catch (err) {
           this.canceled = true
@@ -77,7 +69,6 @@ class Extractor {
   async extractEntry (entry) {
     /* istanbul ignore if */
     if (this.canceled) {
-      debug('skipping entry extraction', entry.fileName, { cancelled: this.canceled })
       return
     }
 
@@ -89,11 +80,9 @@ class Extractor {
 
     // convert external file attr int into a fs stat mode int
     const mode = (entry.externalFileAttributes >> 16) & 0xFFFF
-    // check if it's a symlink or dir (using stat mode constants)
+
     const IFMT = 61440
     const IFDIR = 16384
-    const IFLNK = 40960
-    const symlink = (mode & IFMT) === IFLNK
     let isDir = (mode & IFMT) === IFDIR
 
     // Failsafe, borrowed from jsZip
@@ -106,8 +95,6 @@ class Extractor {
     const madeBy = entry.versionMadeBy >> 8
     if (!isDir) isDir = (madeBy === 0 && entry.externalFileAttributes === 16)
 
-    debug('extracting entry', { filename: entry.fileName, isDir: isDir, isSymlink: symlink })
-
     const procMode = this.getExtractedMode(mode, isDir) & 0o777
 
     // always ensure folders are created
@@ -117,20 +104,13 @@ class Extractor {
     if (isDir) {
       mkdirOptions.mode = procMode
     }
-    debug('mkdir', { dir: destDir, ...mkdirOptions })
+
     await fs.mkdir(destDir, mkdirOptions)
     if (isDir) return
 
-    debug('opening read stream', dest)
     const readStream = await promisify(this.zipfile.openReadStream.bind(this.zipfile))(entry)
 
-    if (symlink) {
-      const link = await getStream(readStream)
-      debug('creating symlink', link, dest)
-      await fs.symlink(link, dest)
-    } else {
-      await pipeline(readStream, createWriteStream(dest, { mode: procMode }))
-    }
+    await pipeline(readStream, createWriteStream(dest, { mode: procMode }))
   }
 
   getExtractedMode (entryMode, isDir) {
@@ -161,8 +141,6 @@ class Extractor {
 }
 
 module.exports = async function (zipPath, opts) {
-  debug('creating target directory', opts.dir)
-
   if (!path.isAbsolute(opts.dir)) {
     throw new Error('Target directory is expected to be absolute')
   }
