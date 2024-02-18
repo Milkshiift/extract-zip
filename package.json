@@ -4,9 +4,6 @@
   "description": "unzip a zip file into a directory using 100% javascript",
   "main": "index.js",
   "types": "index.d.ts",
-  "bin": {
-    "extract-zip": "cli.js"
-  },
   "scripts": {
     "test": "node test/index.js"
   },
