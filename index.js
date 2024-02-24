@@ -4,17 +4,31 @@ const { promisify } = require('util')
 const stream = require('stream')
 const yauzl = require('yauzl')
 
+const fromBuffer = promisify(yauzl.fromBuffer)
 const openZip = promisify(yauzl.open)
 const pipeline = promisify(stream.pipeline)
 
+const yauzlOpts = { lazyEntries: true }
+
 class Extractor {
-  constructor (zipPath, opts) {
-    this.zipPath = zipPath
+  constructor (opts) {
     this.opts = opts
   }
 
-  async extract () {
-    this.zipfile = await openZip(this.zipPath, { lazyEntries: true })
+  async extractFile (zipPath) {
+    const zipfile = await openZip(zipPath, yauzlOpts)
+    return this.extract(zipfile)
+  }
+
+  async extractBuffer (buffer) {
+    const zipfile = await fromBuffer(buffer, yauzlOpts)
+    return this.extract(zipfile)
+  }
+
+  async extract (zipfile) {
+    await this.ensureDir()
+
+    this.zipfile = zipfile
     this.canceled = false
 
     return new Promise((resolve, reject) => {
@@ -24,10 +38,8 @@ class Extractor {
       })
       this.zipfile.readEntry()
 
-      this.zipfile.on('close', () => {
-        if (!this.canceled) {
-          resolve()
-        }
+      this.zipfile.on('end', () => {
+        resolve()
       })
 
       this.zipfile.on('entry', async (entry) => {
@@ -138,14 +150,25 @@ class Extractor {
 
     return mode
   }
-}
 
-module.exports = async function (zipPath, opts) {
-  if (!path.isAbsolute(opts.dir)) {
-    throw new Error('Target directory is expected to be absolute')
+  async ensureDir () {
+    if (!path.isAbsolute(this.opts.dir)) {
+      throw new Error('Target directory is expected to be absolute')
+    }
+
+    await fs.mkdir(this.opts.dir, { recursive: true })
+    this.opts.dir = await fs.realpath(this.opts.dir)
   }
-
-  await fs.mkdir(opts.dir, { recursive: true })
-  opts.dir = await fs.realpath(opts.dir)
-  return new Extractor(zipPath, opts).extract()
 }
+
+async function extractFile (filename, opts) {
+  return new Extractor(opts).extractFile(filename)
+}
+
+async function extractBuffer (buffer, opts) {
+  return new Extractor(opts).extractBuffer(buffer)
+}
+
+module.exports = extractFile
+module.exports.extractBuffer = extractBuffer
+module.exports.extractFile = extractFile

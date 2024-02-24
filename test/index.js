@@ -5,8 +5,22 @@ const fs = require('fs');
 const catsZip = path.join(__dirname, 'cats.zip');
 const catsOut = path.join(__dirname, 'cats');
 
-try {
-    fs.rmSync(catsOut, { recursive: true });
-} catch (e) {}
+function deleteCats() {
+    try {
+        fs.rmSync(catsOut, { recursive: true });
+    } catch (e) {}
+}
 
-extract(catsZip, { dir: catsOut });
+function testFileExtract() {
+    deleteCats()
+    extract.extractFile(catsZip, { dir: catsOut });
+}
+
+function testBufferExtract() {
+    const catsBuf = fs.readFileSync(catsZip)
+    deleteCats()
+    extract.extractBuffer(catsBuf, { dir: catsOut });
+}
+
+testFileExtract()
+testBufferExtract()

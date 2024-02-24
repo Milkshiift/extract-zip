@@ -6,25 +6,19 @@ import { Entry, ZipFile } from 'yauzl';
 
 declare namespace extract {
     interface Options {
-        /** The path to the directory where the extracted files are written */
         dir: string;
-        /** Directory Mode (permissions), defaults to `0o755` */
         defaultDirMode?: number;
-        /** File Mode (permissions), defaults to `0o644` */
         defaultFileMode?: number;
-        /**
-         * If present, will be called with (entry, zipfile),
-         * entry is every entry from the zip file forwarded
-         * from the entry event from yauzl. zipfile is the
-         * yauzl instance
-         */
         onEntry?: (entry: Entry, zipfile: ZipFile) => void;
     }
+
+    type ExtractBuffer = (buffer: Buffer, opts: extract.Options) => Promise<void>;
+    type ExtractFile = (zipPath: string, opts: extract.Options) => Promise<void>;
 }
 
-declare function extract(
-  zipPath: string,
-  opts: extract.Options,
-): Promise<void>;
+declare const extract: extract.ExtractFile & {
+    extractBuffer: extract.ExtractBuffer,
+    extractFile: extract.ExtractFile
+};
 
 export = extract;
