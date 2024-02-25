@@ -5,21 +5,21 @@ const fs = require('fs');
 const catsZip = path.join(__dirname, 'cats.zip');
 const catsOut = path.join(__dirname, 'cats');
 
-function deleteCats() {
+async function deleteCats() {
     try {
-        fs.rmSync(catsOut, { recursive: true });
+        await fs.promises.rm(catsOut, { recursive: true });
     } catch (e) {}
 }
 
-function testFileExtract() {
-    deleteCats()
-    extract.extractFile(catsZip, { dir: catsOut });
+async function testFileExtract() {
+    await deleteCats()
+    await extract.extractFile(catsZip, { dir: catsOut });
 }
 
-function testBufferExtract() {
-    const catsBuf = fs.readFileSync(catsZip)
-    deleteCats()
-    extract.extractBuffer(catsBuf, { dir: catsOut });
+async function testBufferExtract() {
+    await deleteCats()
+    const catsBuf = await fs.promises.readFile(catsZip)
+    await extract.extractBuffer(catsBuf, { dir: catsOut, excludedFiles: ["a-cat.png"] });
 }
 
 testFileExtract()

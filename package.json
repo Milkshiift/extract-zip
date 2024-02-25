@@ -22,12 +22,12 @@
     "node": ">= 12.22.12"
   },
   "dependencies": {
-    "yauzl": "^3.0.0"
+    "yauzl": "^3.1.0"
   },
   "optionalDependencies": {
     "@types/yauzl": "^2.10.3"
   },
   "devDependencies": {
-    "typescript": "^3.9.10"
+    "typescript": "^5.3.3"
   }
 }

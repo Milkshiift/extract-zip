@@ -13,6 +13,7 @@ const yauzlOpts = { lazyEntries: true }
 class Extractor {
   constructor (opts) {
     this.opts = opts
+    this.excludedFiles = opts.excludedFiles || []
   }
 
   async extractFile (zipPath) {
@@ -52,6 +53,11 @@ class Extractor {
           return
         }
 
+        if (this.excludedFiles.includes(entry.fileName)) {
+          this.zipfile.readEntry()
+          return
+        }
+
         const destDir = path.dirname(path.join(this.opts.dir, entry.fileName))
 
         try {
@@ -79,7 +85,6 @@ class Extractor {
   }
 
   async extractEntry (entry) {
-    /* istanbul ignore if */
     if (this.canceled) {
       return
     }
